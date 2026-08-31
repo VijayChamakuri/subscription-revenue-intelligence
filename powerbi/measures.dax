@@ -1,0 +1,136 @@
+// Core measures. Table and column names must be aligned to the final export schema.
+// All monetary values are reporting currency unless a measure name says otherwise.
+
+Opening MRR :=
+SUM ( 'MRR Movement'[opening_mrr] )
+
+New MRR :=
+CALCULATE ( SUM ( 'MRR Movement'[movement_mrr] ), 'MRR Movement'[movement_type] = "new" )
+
+Expansion MRR :=
+CALCULATE ( SUM ( 'MRR Movement'[movement_mrr] ), 'MRR Movement'[movement_type] = "expansion" )
+
+Contraction MRR :=
+- CALCULATE ( SUM ( 'MRR Movement'[movement_mrr] ), 'MRR Movement'[movement_type] = "contraction" )
+
+Churned MRR :=
+- CALCULATE ( SUM ( 'MRR Movement'[movement_mrr] ), 'MRR Movement'[movement_type] = "churn" )
+
+Reactivation MRR :=
+CALCULATE ( SUM ( 'MRR Movement'[movement_mrr] ), 'MRR Movement'[movement_type] = "reactivation" )
+
+Net New MRR :=
+[New MRR] + [Expansion MRR] + [Reactivation MRR] - [Contraction MRR] - [Churned MRR]
+
+Closing MRR :=
+SUM ( 'MRR Movement'[closing_mrr] )
+
+MRR Bridge Variance :=
+[Closing MRR] - ( [Opening MRR] + [Net New MRR] )
+
+ARR :=
+12 * [Closing MRR]
+
+GRR :=
+DIVIDE ( [Opening MRR] - [Contraction MRR] - [Churned MRR], [Opening MRR] )
+
+NRR :=
+DIVIDE ( [Opening MRR] + [Expansion MRR] + [Reactivation MRR] - [Contraction MRR] - [Churned MRR], [Opening MRR] )
+
+Active Accounts :=
+CALCULATE ( DISTINCTCOUNT ( 'MRR Movement'[account_key] ), 'MRR Movement'[closing_mrr] > 0 )
+
+ARPA :=
+DIVIDE ( [Closing MRR], [Active Accounts] )
+
+Logo Churn Rate :=
+DIVIDE ( SUM ( 'Cohort Retention'[churned_logos] ), SUM ( 'Cohort Retention'[starting_logos] ) )
+
+Logo Retention :=
+DIVIDE ( SUM ( 'Cohort Retention'[retained_logos] ), SUM ( 'Cohort Retention'[starting_logos] ) )
+
+Revenue Retention :=
+DIVIDE ( SUM ( 'Cohort Retention'[retained_mrr] ), SUM ( 'Cohort Retention'[starting_mrr] ) )
+
+Collected Cash :=
+SUM ( 'Finance Summary'[settled_payment_amount] ) - SUM ( 'Finance Summary'[settled_refund_amount] )
+
+Recognized Revenue :=
+SUM ( 'Finance Summary'[recognized_revenue] )
+
+Deferred Revenue :=
+SUM ( 'Finance Summary'[ending_deferred_revenue] )
+
+Failed Payment Exposure :=
+SUM ( 'Finance Summary'[failed_payment_exposure] )
+
+Refund Rate :=
+DIVIDE ( SUM ( 'Finance Summary'[settled_refund_amount] ), SUM ( 'Finance Summary'[settled_payment_amount] ) )
+
+Discount Leakage :=
+SUM ( 'Finance Summary'[discount_leakage_amount] )
+
+Reconciliation Exception Count :=
+COUNTROWS ( FILTER ( 'Reconciliation Exceptions', 'Reconciliation Exceptions'[is_open] = TRUE () ) )
+
+Reconciliation Exception Amount :=
+CALCULATE ( SUM ( 'Reconciliation Exceptions'[exception_amount] ), 'Reconciliation Exceptions'[is_open] = TRUE () )
+
+CAC :=
+DIVIDE ( SUM ( 'Unit Economics'[eligible_acquisition_cost] ), SUM ( 'Unit Economics'[new_paid_accounts] ) )
+
+Gross Margin Adjusted LTV :=
+DIVIDE (
+    SUMX ( 'Unit Economics', 'Unit Economics'[ltv] * 'Unit Economics'[new_paid_accounts] ),
+    SUM ( 'Unit Economics'[new_paid_accounts] )
+)
+
+LTV to CAC :=
+DIVIDE ( [Gross Margin Adjusted LTV], [CAC] )
+
+CAC Payback Months :=
+DIVIDE ( SUM ( 'Unit Economics'[eligible_acquisition_cost] ), SUM ( 'Unit Economics'[monthly_contribution_margin] ) )
+
+Lead to Opportunity Conversion :=
+DIVIDE ( SUM ( 'Funnel'[opportunity_leads] ), SUM ( 'Funnel'[eligible_leads] ) )
+
+Opportunity Win Rate :=
+DIVIDE ( SUM ( 'Funnel'[won_opportunities] ), SUM ( 'Funnel'[closed_opportunities] ) )
+
+Average Sales Cycle Days :=
+DIVIDE (
+    SUMX ( 'Funnel', 'Funnel'[sales_cycle_days_sum] ),
+    SUM ( 'Funnel'[won_opportunities_with_valid_cycle] )
+)
+
+Average Health Score :=
+AVERAGE ( 'Customer Risk'[health_score] )
+
+High Risk Accounts :=
+CALCULATE ( DISTINCTCOUNT ( 'Customer Risk'[account_key] ), 'Customer Risk'[above_intervention_threshold] = TRUE () )
+
+High Risk MRR :=
+CALCULATE ( SUM ( 'Customer Risk'[mrr_exposure] ), 'Customer Risk'[above_intervention_threshold] = TRUE () )
+
+Forecast MRR :=
+CALCULATE ( SUM ( 'Forecast Scenario'[metric_value] ), 'Forecast Scenario'[metric_name] = "MRR", 'Forecast Scenario'[value_type] = "forecast" )
+
+Scenario MRR :=
+CALCULATE ( SUM ( 'Forecast Scenario'[metric_value] ), 'Forecast Scenario'[metric_name] = "MRR", 'Forecast Scenario'[value_type] = "scenario" )
+
+Forecast Error MAPE :=
+DIVIDE ( SUM ( 'Forecast Backtest'[absolute_percentage_error_weighted] ), SUM ( 'Forecast Backtest'[weight] ) )
+
+Data Tests Failed :=
+CALCULATE ( COUNTROWS ( 'Data Quality' ), 'Data Quality'[status] = "fail" )
+
+Last Refresh UTC :=
+MAX ( 'Refresh Audit'[completed_at_utc] )
+
+Selected Period Title :=
+VAR StartDate = MIN ( 'Date'[date] )
+VAR EndDate = MAX ( 'Date'[date] )
+RETURN "Performance from " & FORMAT ( StartDate, "mmm d, yyyy" ) & " to " & FORMAT ( EndDate, "mmm d, yyyy" )
+
+Metric Trust Status :=
+IF ( [Data Tests Failed] = 0 && ABS ( [MRR Bridge Variance] ) < 0.01, "Certified for this refresh", "Review quality exceptions" )

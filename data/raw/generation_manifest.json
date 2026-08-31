@@ -1,0 +1,29 @@
+{
+  "seed": 20260831,
+  "synthetic": true,
+  "counts": {
+    "dim_geography": 5,
+    "dim_marketing_channel": 5,
+    "dim_product": 3,
+    "dim_plan": 3,
+    "dim_sales_rep": 12,
+    "dim_customer_success_manager": 8,
+    "dim_account": 1200,
+    "dim_customer": 1200,
+    "fact_subscriptions": 1200,
+    "fact_subscription_events": 3296,
+    "fact_invoices": 17668,
+    "fact_invoice_lines": 17668,
+    "fact_payments": 17668,
+    "fact_refunds": 186,
+    "fact_support_tickets": 3600,
+    "fact_marketing_spend": 180,
+    "fact_leads": 3683,
+    "fact_opportunities": 820,
+    "fact_contracts": 997,
+    "fact_customer_health": 1200,
+    "fact_revenue_recognition": 17668,
+    "model_churn_snapshots": 6766,
+    "product_usage_events": 600000
+  }
+}

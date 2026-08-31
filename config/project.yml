@@ -1,0 +1,12 @@
+seed: 20260831
+start_date: "2023-01-01"
+end_date: "2025-12-31"
+accounts: 1200
+usage_events: 600000
+base_currency: USD
+currencies:
+  USD: 1.0
+  EUR: 1.08
+  GBP: 1.27
+  CAD: 0.74
+

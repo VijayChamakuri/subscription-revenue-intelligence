@@ -1,0 +1,16 @@
+name: validation
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --extra dev
+      - run: uv run python -m src.generation.generate --config config/project.yml
+      - run: uv run python -m src.validation.validate_sources --data-dir data/raw
+      - run: uv run python -m src.ingestion.load_duckdb --data-dir data/raw --database data/warehouse/subscription.duckdb
+      - run: cd dbt && ../.venv/bin/dbt build --profiles-dir .
+      - run: uv run pytest
+      - run: uv run ruff check src tests spark airflow
+

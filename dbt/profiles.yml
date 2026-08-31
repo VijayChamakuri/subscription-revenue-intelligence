@@ -1,0 +1,8 @@
+subscription_revenue_intelligence:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "../data/warehouse/subscription.duckdb"
+      schema: analytics
+      threads: 4
