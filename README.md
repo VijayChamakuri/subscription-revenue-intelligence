@@ -84,10 +84,7 @@ The synthetic closing-month contraction is primarily churn-driven. Finance outpu
 - [Synthetic-data methodology](docs/synthetic_data_methodology.md)
 - [Metric dictionary](docs/metric_dictionary.md)
 - [Technical report](reports/technical_report.md)
-- [Interview guide](docs/interview_guide.md)
-- [Demonstration script](docs/demo_script.md)
 - [Limitations and ethics](docs/limitations_and_ethics.md)
-- [Résumé bullets](resume_bullets.md)
 
 ## Limitations
 

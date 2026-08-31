@@ -11,6 +11,11 @@ dbt/target/
 dbt/logs/
 dbt/dbt_packages/
 dbt/.user.yml
+
+# Local portfolio preparation material
+docs/interview_guide.md
+docs/demo_script.md
+resume_bullets.md
 data/raw/*.csv
 data/processed/*.parquet
 data/exports/*.csv
