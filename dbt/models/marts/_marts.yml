@@ -11,11 +11,16 @@ models:
       - {name: product_id, tests: [not_null, unique]}
       - name: gross_margin_pct
         tests:
-          - dbt_utils.accepted_range: {min_value: 0, max_value: 1, inclusive: true}
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 1, inclusive: true}
   - name: dim_plan
     columns:
       - {name: plan_id, tests: [not_null, unique]}
-      - {name: product_id, tests: [not_null, relationships: {to: "ref('dim_product')", field: product_id}]}
+      - name: product_id
+        tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_product')", field: product_id}
       - {name: list_price, tests: [not_null, non_negative]}
   - name: dim_date
     columns:
@@ -24,16 +29,23 @@ models:
     description: Customer-product-plan monthly MRR bridge with mutually exclusive movement classification.
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [month_start, customer_id, product_id, plan_id]
+          arguments:
+            combination_of_columns: [month_start, customer_id, product_id, plan_id]
       - cents_close:
-          expression_a: opening_mrr + new_mrr + expansion_mrr + reactivation_mrr - contraction_mrr - churned_mrr
-          expression_b: closing_mrr
+          arguments:
+            expression_a: opening_mrr + new_mrr + expansion_mrr + reactivation_mrr - contraction_mrr - churned_mrr
+            expression_b: closing_mrr
     columns:
       - {name: month_start, tests: [not_null]}
-      - {name: customer_id, tests: [not_null, relationships: {to: "ref('dim_customer')", field: customer_id}]}
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_customer')", field: customer_id}
       - name: movement_type
         tests:
-          - accepted_values: {values: [new, expansion, contraction, churn, reactivation, no_change]}
+          - accepted_values:
+              arguments: {values: [new, expansion, contraction, churn, reactivation, no_change]}
       - {name: opening_mrr, tests: [not_null, non_negative]}
       - {name: closing_mrr, tests: [not_null, non_negative]}
   - name: mart_mrr_bridge
@@ -42,7 +54,8 @@ models:
       - {name: month_start, tests: [not_null, unique]}
       - {name: reconciliation_difference, tests: [not_null]}
     tests:
-      - cents_close: {expression_a: reconciliation_difference, expression_b: "0"}
+      - cents_close:
+          arguments: {expression_a: reconciliation_difference, expression_b: "0"}
   - name: mart_revenue_kpis
     columns:
       - {name: month_start, tests: [not_null, unique]}
@@ -50,7 +63,10 @@ models:
       - {name: arr, tests: [non_negative]}
       - name: gross_revenue_retention
         tests:
-          - dbt_utils.accepted_range: {min_value: 0, max_value: 1, inclusive: true, where: "gross_revenue_retention is not null"}
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 1, inclusive: true}
+              config:
+                where: gross_revenue_retention is not null
   - name: fct_billing_reconciliation
     description: Invoice grain comparison of billed, paid, failed, refunded, recognized, deferred, and collected amounts.
     columns:
@@ -64,20 +80,25 @@ models:
       - name: exception_type
         tests:
           - accepted_values:
-              values: [duplicate_invoice, paid_invoice_without_valid_subscription, payment_invoice_mismatch, invalid_discount, negative_revenue_anomaly, currency_inconsistency, contract_date_conflict, active_subscription_without_invoice]
-      - {name: severity, tests: [accepted_values: {values: [high, medium, low]}]}
+              arguments:
+                values: [duplicate_invoice, paid_invoice_without_valid_subscription, payment_invoice_mismatch, invalid_discount, negative_revenue_anomaly, currency_inconsistency, contract_date_conflict, active_subscription_without_invoice]
+      - name: severity
+        tests:
+          - accepted_values:
+              arguments: {values: [high, medium, low]}
   - name: mart_customer_monthly_health
     tests:
-      - dbt_utils.unique_combination_of_columns: {combination_of_columns: [month_start, customer_id]}
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [month_start, customer_id]}
     columns:
       - {name: mrr, tests: [non_negative]}
       - {name: events_count, tests: [non_negative]}
       - {name: ticket_count, tests: [non_negative]}
   - name: mart_channel_efficiency
     tests:
-      - dbt_utils.unique_combination_of_columns: {combination_of_columns: [month_start, channel_id]}
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [month_start, channel_id]}
     columns:
       - {name: spend, tests: [non_negative]}
       - {name: leads, tests: [non_negative]}
       - {name: acquired_customers, tests: [non_negative]}
-

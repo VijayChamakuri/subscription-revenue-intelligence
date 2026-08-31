@@ -2,7 +2,7 @@
 
 ## Verified implementation
 
-Python generates and validates deterministic source records. DuckDB provides the tested local warehouse. Contract views isolate source names from dbt, which owns staging, intermediate logic, star-schema dimensions, MRR movements, revenue KPIs, growth marts, finance reconciliation, and exceptions. Python implements calibrated churn modeling and rolling-origin forecasts. Spark, R, Airflow, and Power BI assets are included with honest runtime boundaries.
+Python generates and validates deterministic source records. DuckDB provides the tested local warehouse. Contract views isolate source names from dbt, which owns staging, intermediate logic, star-schema dimensions, MRR movements, revenue KPIs, growth marts, finance reconciliation, and exceptions. Python implements calibrated churn modeling and rolling-origin forecasts. Spark, Hive-compatible DDL, R, and Airflow were executed locally. Power BI remains a specification with an explicit native-runtime boundary.
 
 ## Reproducibility record
 
@@ -17,7 +17,7 @@ Python generates and validates deterministic source records. DuckDB provides the
 
 ## Transformation and quality evidence
 
-Source contracts passed for required files, keys, date ordering, discount bounds, nonnegative MRR, and invoice-to-subscription references. dbt built 36 models and executed 71 data tests. The final run passed all 104 dbt resources. Source freshness remains unexecuted because generated raw files have no warehouse ingestion timestamp. No incremental equivalence benchmark is claimed.
+Source contracts passed for all 23 files, including schemas, keys, date ordering, range constraints, and 25 cross-table relationships. dbt built 36 models and executed 71 data tests. The final run passed all 104 dbt resources without deprecation warnings. Source freshness remains unexecuted because generated raw files have no warehouse ingestion timestamp. No incremental equivalence benchmark is claimed.
 
 ## Revenue and finance validation
 
@@ -25,15 +25,15 @@ The 36-month MRR bridge enforces `closing = opening + new + expansion + reactiva
 
 ## Churn modeling
 
-The modeling contract is one account snapshot per as-of date with a 90-day future churn label. Identifiers and post-outcome fields are excluded. Splits contain 2,122 training, 1,587 calibration, and 3,057 future test rows. Calibrated logistic regression reaches 0.996 ROC-AUC, 0.894 PR-AUC, 0.004 Brier score, 61.4% precision, and 89.6% recall at threshold 0.17. The boosting challenger reaches 0.997 ROC-AUC but lower PR-AUC. Economics assume a $35 contact cost, $900 retained margin, and 18% intervention success. The strong performance is driven by deliberately encoded synthetic risk signals and is not a realistic production expectation.
+The modeling contract is one account snapshot per as-of date with a 90-day future churn label. Identifiers and post-outcome fields are excluded. The generator introduces latent account variation, missing and delayed observations, weaker predictors, temporal drift, label noise, and unseen future conditions. Splits contain 2,122 training, 1,587 calibration, and 3,057 future test rows. Calibrated logistic regression reaches 0.710 ROC-AUC, 0.058 PR-AUC, and 0.014 Brier score. The boosting challenger reaches 0.693 ROC-AUC and 0.044 PR-AUC. Economics assume a $35 contact cost, $6,000 retained margin, and 18% intervention success. The modest precision reflects the low event rate and is disclosed rather than hidden.
 
 ## Forecasting and statistical validation
 
-Forecast code compares naive, seasonal-naive, and drift methods with rolling-origin backtesting, then labels forecasts and scenarios separately. The executable smoke test passed. R code implements Kaplan-Meier and Cox proportional-hazards analysis with diagnostics, while Python provides a dependency-light cross-check. R execution was not possible because `Rscript` is absent, so no R-derived finding is published.
+Forecast code compares naive, seasonal-naive, and drift methods with rolling-origin backtesting, then labels forecasts and scenarios separately. R analyzed 997 customer spells with 173 churn events and produced Cox concordance of 0.6391. Its 54 Kaplan-Meier estimates matched the independent Python calculation within `5.56e-16`.
 
 ## Spark and orchestration
 
-The Spark job reads the 600,000-event CSV, aggregates account-day activity, and writes year/month partitioned Parquet compatible with the included Hive DDL. PySpark 3.5.9 installed, but execution stopped before processing because the host has no Java runtime. No Spark runtime benchmark is claimed. The Airflow DAG statically defines generation, validation, Spark, load, dbt, analytics, export, and monitoring dependencies, but an Airflow scheduler was not started.
+PySpark 3.5.9 processed the 600,000-event CSV in 6.807 seconds using `local[*]`, produced 481,956 account-day rows across 36 year/month partitions, and reconciled the event total through the included Hive-compatible DDL. Airflow 2.11.2 successfully executed a local `dags test` across generation, validation, Spark, load, dbt, analytics, export, and monitoring. This is local runtime evidence, not a production scheduler or big-data performance claim.
 
 ## BI verification
 

@@ -1,6 +1,6 @@
 # Power BI Report Specification
 
-The primary BI deliverable is an eight-page Power BI report backed by tested export marts. This directory contains the semantic model, DAX measure library, page design, and QA checklist. A `.pbix` file and screenshots must not be claimed until authored and verified in Power BI Desktop.
+This directory is an implementation specification for an eight-page Power BI report backed by tested export marts. It contains the semantic model, DAX measure library, page design, and QA checklist. It is not a completed BI deliverable: no `.pbix`, executed DAX, native relationships, screenshots, or visual QA can be claimed until the report is authored and verified in Power BI Desktop on Windows.
 
 ## Required import tables
 

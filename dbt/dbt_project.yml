@@ -36,7 +36,3 @@ models:
       growth:
         +materialized: table
         +schema: growth
-      quality:
-        +materialized: table
-        +schema: quality
-

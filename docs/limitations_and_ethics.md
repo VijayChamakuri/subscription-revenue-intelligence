@@ -13,7 +13,8 @@ All records are synthetic. Findings can be described only as identified, quantif
 - CAC and LTV rely on attribution, cost allocation, gross margin, discount rate, and horizon assumptions.
 - Forecast intervals reflect modeled uncertainty, not every business or macroeconomic shock.
 - Associations between usage, support, payment behavior, and churn do not establish causation.
-- BigQuery execution, Power BI rendering, and real cloud performance cannot be claimed without those environments.
+- Spark, Hive-compatible DDL, R, and Airflow were validated locally; the results do not establish production scale, uptime, or cloud performance.
+- BigQuery execution and Power BI rendering cannot be claimed without those environments.
 
 ## Responsible churn scoring
 

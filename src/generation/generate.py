@@ -357,6 +357,13 @@ def generate(config_path: Path, output: Path) -> dict[str, int]:
     )
 
     snapshot_rows = []
+    # Churn features are noisy observations of an unobserved account state. They are
+    # intentionally not generated from the future label. This prevents the near
+    # deterministic target encoding that made the original synthetic model trivial.
+    eventual_churn = subscriptions.status.eq("canceled").to_numpy(dtype=float)
+    account_friction = rng.normal(0, 1, n) + 0.65 * eventual_churn
+    account_engagement = rng.normal(0, 1, n) - 0.50 * eventual_churn
+    account_payment_risk = rng.normal(0, 1, n) + 0.45 * eventual_churn
     split_months = pd.date_range("2023-03-31", "2025-09-30", freq="3ME")
     for i, sub in subscriptions.iterrows():
         account = accounts.iloc[i]
@@ -364,24 +371,58 @@ def generate(config_path: Path, output: Path) -> dict[str, int]:
         for snapshot in split_months:
             if snapshot < pd.Timestamp(sub.trial_start_date):
                 continue
-            future_churn = int(
+            true_future_churn = int(
                 pd.notna(churn_date)
                 and snapshot < churn_date
                 and churn_date <= snapshot + pd.offsets.Day(90)
             )
-            risk_shift = float(future_churn)
+            days_to_churn = (churn_date - snapshot).days if pd.notna(churn_date) else 9999
+            # Operational signals arrive late and strengthen only near an observed
+            # cancellation. A 2025 product change creates a future condition that
+            # weakens the historical usage and adoption relationships.
+            warning = max(0.0, 1.0 - days_to_churn / 75.0) if 0 < days_to_churn <= 120 else 0.0
+            future_regime = snapshot >= pd.Timestamp("2025-01-01")
+            signal_strength = 0.80 if future_regime else 1.0
+            friction = account_friction[i]
+            engagement = account_engagement[i]
+            payment_risk = account_payment_risk[i]
+            observed_label = true_future_churn
+            # Labels reflect delayed CRM updates and occasional unrecorded churn.
+            if observed_label and rng.random() < (0.14 if future_regime else 0.09):
+                observed_label = 0
+            elif not observed_label and rng.random() < (0.002 if future_regime else 0.001):
+                observed_label = 1
+            usage_change = rng.normal(
+                -0.025 - 0.07 * engagement - 0.78 * warning * signal_strength,
+                0.30 + 0.05 * future_regime,
+            )
+            adoption = np.clip(
+                rng.beta(3, 2) + 0.055 * engagement - 0.43 * warning * signal_strength,
+                0,
+                1,
+            )
+            recency = rng.gamma(2.0, max(2.0, 6.0 + 1.4 * friction + 6.0 * warning))
             snapshot_rows.append(
                 {
                     "account_id": sub.account_id,
                     "as_of_date": snapshot.date(),
-                    "usage_change_30d": round(
-                        float(rng.normal(-0.03 - 0.42 * risk_shift, 0.22)), 4
+                    "usage_change_30d": round(float(usage_change), 4),
+                    "feature_adoption_rate": round(float(adoption), 4),
+                    "support_tickets_90d": int(
+                        rng.poisson(max(0.1, 1.5 + 0.35 * friction + 2.0 * warning))
                     ),
-                    "feature_adoption_rate": round(
-                        float(np.clip(rng.beta(3, 2) - 0.25 * risk_shift, 0, 1)), 4
+                    "failed_payments_90d": int(
+                        rng.binomial(
+                            2,
+                            float(
+                                np.clip(
+                                    0.045 + 0.025 * payment_risk + 0.23 * warning,
+                                    0.005,
+                                    0.35,
+                                )
+                            ),
+                        )
                     ),
-                    "support_tickets_90d": int(rng.poisson(1.4 + 2.4 * risk_shift)),
-                    "failed_payments_90d": int(rng.binomial(2, 0.04 + 0.28 * risk_shift)),
                     "contract_age_months": max(
                         0,
                         (snapshot.year - pd.Timestamp(sub.trial_start_date).year) * 12
@@ -389,15 +430,29 @@ def generate(config_path: Path, output: Path) -> dict[str, int]:
                         - pd.Timestamp(sub.trial_start_date).month,
                     ),
                     "seats": sub.seats,
-                    "engagement_recency_days": round(float(rng.gamma(2, 5 + 12 * risk_shift)), 2),
-                    "prior_downgrades": int(rng.binomial(2, 0.06 + 0.25 * risk_shift)),
+                    "engagement_recency_days": round(float(recency), 2),
+                    "prior_downgrades": int(
+                        rng.binomial(2, float(np.clip(0.07 + 0.035 * friction, 0.01, 0.25)))
+                    ),
                     "mrr": sub.initial_mrr,
                     "plan_type": sub.contract_type,
                     "customer_size": str(account.segment).lower().replace("-", "_"),
-                    "churned_within_90d": future_churn,
+                    "churned_within_90d": observed_label,
                 }
             )
     churn_snapshots = pd.DataFrame(snapshot_rows)
+    # Some recent operational observations are missing or delayed. Missingness is
+    # applied only to predictors, never to dates, identifiers, or outcomes.
+    delayed_columns = [
+        "usage_change_30d",
+        "feature_adoption_rate",
+        "support_tickets_90d",
+        "failed_payments_90d",
+        "engagement_recency_days",
+    ]
+    for column in delayed_columns:
+        missing_rate = 0.06 if column != "failed_payments_90d" else 0.035
+        churn_snapshots.loc[rng.random(len(churn_snapshots)) < missing_rate, column] = np.nan
 
     tables = {
         "dim_geography": geo,

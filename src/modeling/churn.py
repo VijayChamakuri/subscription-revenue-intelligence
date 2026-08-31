@@ -54,7 +54,7 @@ class SplitDates:
 @dataclass(frozen=True)
 class InterventionEconomics:
     contact_cost: float = 35.0
-    retained_margin_if_successful: float = 900.0
+    retained_margin_if_successful: float = 6000.0
     intervention_success_rate: float = 0.18
 
     @property
@@ -237,22 +237,30 @@ def synthetic_churn_fixture(seed: int = 42, accounts: int = 1400) -> pd.DataFram
     rng = np.random.default_rng(seed)
     dates = pd.date_range("2022-01-31", "2025-12-31", freq="ME")
     snapshot_date = rng.choice(dates, accounts)
-    usage_change = rng.normal(-0.02, 0.28, accounts)
-    adoption = rng.beta(2.5, 2.0, accounts)
-    tickets = rng.poisson(1.7, accounts)
-    failures = rng.binomial(2, 0.08, accounts)
-    recency = rng.gamma(2.0, 7.0, accounts)
-    downgrade = rng.binomial(2, 0.10, accounts)
+    latent_risk = rng.normal(0, 1, accounts)
+    future_regime = pd.to_datetime(snapshot_date) >= pd.Timestamp("2025-01-01")
+    usage_change = rng.normal(-0.02 - 0.08 * latent_risk, 0.31, accounts)
+    adoption = np.clip(rng.beta(2.5, 2.0, accounts) - 0.045 * latent_risk, 0, 1)
+    tickets = rng.poisson(np.clip(1.7 + 0.20 * latent_risk, 0.2, None))
+    failures = rng.binomial(2, np.clip(0.07 + 0.018 * latent_risk, 0.01, 0.25))
+    recency = rng.gamma(2.0, np.clip(7.0 + 0.7 * latent_risk, 2, None))
+    downgrade = rng.binomial(2, np.clip(0.09 + 0.018 * latent_risk, 0.01, 0.25))
     logit = (
-        -2.5
-        - 2.0 * usage_change
-        - 1.4 * adoption
-        + 0.16 * tickets
-        + 0.8 * failures
-        + 0.025 * recency
-        + 0.65 * downgrade
+        -2.65
+        - 0.75 * usage_change
+        - 0.50 * adoption
+        + 0.10 * tickets
+        + 0.38 * failures
+        + 0.012 * recency
+        + 0.28 * downgrade
+        + 0.48 * latent_risk
+        + 0.35 * future_regime
+        + rng.normal(0, 0.65, accounts)
     )
     probability = 1 / (1 + np.exp(-logit))
+    labels = rng.binomial(1, probability)
+    noisy_labels = rng.random(accounts) < 0.025
+    labels[noisy_labels] = 1 - labels[noisy_labels]
     return pd.DataFrame(
         {
             "account_id": [f"A{i:06d}" for i in range(accounts)],
@@ -270,7 +278,7 @@ def synthetic_churn_fixture(seed: int = 42, accounts: int = 1400) -> pd.DataFram
             "customer_size": rng.choice(
                 ["small", "mid_market", "enterprise"], accounts, p=[0.55, 0.32, 0.13]
             ),
-            "churned_within_90d": rng.binomial(1, probability),
+            "churned_within_90d": labels,
         }
     ).sort_values("as_of_date")
 
