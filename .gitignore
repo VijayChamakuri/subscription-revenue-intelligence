@@ -10,6 +10,7 @@ logs/
 dbt/target/
 dbt/logs/
 dbt/dbt_packages/
+dbt/.user.yml
 data/raw/*.csv
 data/processed/*.parquet
 data/exports/*.csv
@@ -19,4 +20,3 @@ artifacts/
 !data/processed/.gitkeep
 !data/exports/.gitkeep
 !artifacts/.gitkeep
-
