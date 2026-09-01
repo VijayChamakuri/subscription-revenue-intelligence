@@ -31,17 +31,17 @@ flowchart LR
 
 | Verified result | Evidence |
 |---|---:|
-| Source and modeling records | **695,036** |
+| Source and modeling records | **693,805** |
 | Product-usage events | **600,000** |
 | Customer accounts | **1,200** |
-| December 2025 MRR | **$2.282M** |
-| December 2025 ARR | **$27.387M** |
+| December 2025 MRR | **$1.915M** |
+| December 2025 ARR | **$22.977M** |
 | Maximum MRR bridge variance | **$0.00** |
-| Failed-payment exposure | **$1.400M across 575 attempts** |
-| Finance exceptions detected | **963 contract-date conflicts** |
+| Failed-payment exposure | **$1.462M across 638 attempts** |
+| Finance exceptions detected | **969 contract-date conflicts** |
 | dbt validation | **36 models, 71 tests, 104/104 resources passed** |
 | Source contracts | **23/23 tables passed** |
-| Churn baseline, future holdout | **0.710 ROC-AUC, 0.058 PR-AUC** |
+| Churn baseline, future holdout | **0.633 ROC-AUC, 0.031 PR-AUC** |
 
 ![Verified revenue trend and December MRR movement bridge](assets/readme/revenue_movement.png)
 
@@ -69,15 +69,15 @@ make pipeline
 
 ## The business story
 
-The fictional company grows MRR steadily through most of the 36-month observation window. In December 2025, $189K of churned MRR overwhelms $45K of new MRR and $27K of expansion, producing negative $124K net new MRR. The movement model reconciles opening MRR to closing MRR with no unexplained variance.
+The fictional company grows MRR steadily through most of the 36-month observation window. In December 2025, $335K of churned MRR overwhelms $61K of new MRR and $17K of expansion, producing negative $260K net new MRR. The movement model reconciles opening MRR to closing MRR with no unexplained variance.
 
 This changes the executive question from “Did revenue decline?” to “Which customer segments, product relationships, and operational failures created the decline, and which teams own the response?”
 
-The finance control layer then separates commercial performance from collection and data-quality problems. It quantifies $1.400M of failed-payment exposure and places 963 contract-date conflicts into an exception queue with invoice-level traceability.
+The finance control layer then separates commercial performance from collection and data-quality problems. It quantifies $1.462M of failed-payment exposure and places 969 contract-date conflicts into an exception queue with invoice-level traceability.
 
 ![Failed-payment exposure and finance exception evidence](assets/readme/finance_controls.png)
 
-The predictive layer uses time-aware train, calibration, and future-test periods. The generator now includes latent account variation, weaker individual predictors, missing and delayed observations, temporal drift, and label noise. The calibrated logistic baseline reaches 0.710 ROC-AUC on an unseen future period. That credible result is more useful for error analysis than the earlier near-perfect synthetic score. Rolling forecast backtests show that total MRR and cash are comparatively stable, while churned MRR is highly intermittent and harder to forecast.
+The predictive layer uses time-aware train, calibration, and future-test periods. Ex-ante latent account characteristics generate both noisy observed behavior and later cancellation; predictors never read the realized outcome or cancellation timing. Missing and delayed observations, temporal drift, and label noise further weaken the signal. The calibrated logistic baseline reaches 0.633 ROC-AUC on an unseen future period. Rolling forecast backtests show that total MRR and cash are comparatively stable, while churned MRR is highly intermittent and harder to forecast.
 
 ![Churn validation and rolling forecast backtests](assets/readme/model_validation.png)
 
@@ -113,9 +113,9 @@ This repository contains executable evidence for the critical business logic:
 | Failed-payment exposure | [`assert_failed_payment_exposure_quantified.sql`](dbt/tests/assert_failed_payment_exposure_quantified.sql) | Nonzero exposure required when failed attempts exist |
 | Leakage-safe churn modeling | [`src/modeling/churn.py`](src/modeling/churn.py) | Time splits, calibration, lift, Brier score, and threshold economics |
 | Rolling forecast backtests | [`src/modeling/forecast.py`](src/modeling/forecast.py) | Naive, seasonal-naive, and drift candidates compared |
-| Distributed-event path | [`spark/process_usage_events.py`](spark/process_usage_events.py) | 600,000 events processed in 6.807 seconds into 36 partitions |
+| Distributed-event path | [`spark/process_usage_events.py`](spark/process_usage_events.py) | 600,000 events processed in 5.984 seconds into 36 partitions |
 | Hive compatibility | [`spark/validate_hive_table.py`](spark/validate_hive_table.py) | DDL loaded in Spark Hive support; 600,000 events reconciled |
-| R survival analysis | [`r/survival_analysis.R`](r/survival_analysis.R) | 997 spells, 173 events; Kaplan-Meier output matches Python within 5.56e-16 |
+| R survival analysis | [`r/survival_analysis.R`](r/survival_analysis.R) | 1,004 spells, 248 events; Kaplan-Meier output matches Python within 4.45e-16 |
 | Orchestration | [`airflow/dags/subscription_intelligence.py`](airflow/dags/subscription_intelligence.py) | Local Airflow 2.11.2 DAG test completed successfully |
 | BI semantic design | [`powerbi/semantic_model.md`](powerbi/semantic_model.md) | 39 explicit DAX measures and QA checklist |
 | README evidence charts | [`scripts/generate_readme_visuals.py`](scripts/generate_readme_visuals.py) | Regenerated from tested exports and model artifacts |
@@ -245,16 +245,16 @@ make airflow-test
 | MRR bridge | **$0.00 maximum variance** |
 | Source contracts | **23/23 source tables passed** |
 | Git whitespace and repository hygiene | **Passed** |
-| Spark runtime | **600,000 events processed in 6.807 seconds on local[*]** |
+| Spark runtime | **600,000 events processed in 5.984 seconds on local[*]** |
 | Hive-compatible DDL | **36 partitions and 600,000 events reconciled** |
-| R runtime | **997 spells and 173 churn events; cross-check passed** |
+| R runtime | **1,004 spells and 248 churn events; cross-check passed** |
 | Airflow runtime | **DAG test completed successfully in Airflow 2.11.2** |
 | Native Power BI QA | Requires Power BI Desktop |
 
 ## Recommendations from the synthetic evidence
 
-1. Correct contract lifecycle rules behind the 963 date conflicts before relying on renewal and recognition reporting.
-2. Operationalize failed-payment recovery for the 575 attempts representing $1.400M of exposure.
+1. Correct contract lifecycle rules behind the 969 date conflicts before relying on renewal and recognition reporting.
+2. Operationalize failed-payment recovery for the 638 attempts representing $1.462M of exposure.
 3. Pilot a constrained retention queue using the cost-selected logistic threshold, then measure incremental renewal through a controlled experiment.
 4. Investigate the December churn cohort by segment, plan, acquisition channel, support burden, and adoption decline.
 5. Require executive metrics to pass the dbt reconciliation layer before Power BI refresh.
